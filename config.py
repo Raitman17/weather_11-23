@@ -7,7 +7,7 @@ FORBIDDEN = 403
 SERVER_ERROR = 500
 NOT_FOUND = 404
 
-CONTENT_TYPE = 'html' # NOTE switch content
+CONTENT_TYPE = 'html'  # NOTE switch content
 CONTENT_HEADER = 'Content-Type', f'text/{CONTENT_TYPE}'
 
 TEMPLATES = 'templates/'
@@ -19,3 +19,5 @@ TEMPLATE_CITIES = f'{TEMPLATES}cities.html'
 YANDEX_HEADER = 'X-Yandex-API-Key'
 YANDEX_URL = 'https://api.weather.yandex.ru/v2/forecast'
 WEATHER_KEYS = 'temp', 'feels_like', 'wind_speed'
+
+TIMEOUT = 8
