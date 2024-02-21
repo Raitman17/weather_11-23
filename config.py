@@ -10,4 +10,7 @@ NOT_FOUND = 404
 CONTENT_TYPE = 'html' # NOTE switch content
 CONTENT_HEADER = 'Content-Type', f'text/{CONTENT_TYPE}'
 
-TEMPLATE_MAIN = 'index.html'
+TEMPLATES = 'templates/'
+TEMPLATE_MAIN = f'{TEMPLATES}index.html'
+TEMPLATE_WEATHER = f'{TEMPLATES}weather.html'
+TEMPLATE_CITIES = f'{TEMPLATES}cities.html'

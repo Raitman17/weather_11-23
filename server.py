@@ -3,6 +3,7 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 import config
 import db
 from typing import Optional
+import views
 
 class MyRequestHandler(BaseHTTPRequestHandler):
     db_connection, db_cursor = db.connect()
@@ -21,11 +22,8 @@ class MyRequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(body.encode())
 
     def do_GET(self) -> None:
-        with open(config.TEMPLATE_MAIN, 'r') as file:
-            page = file.read()
-        cities = '<br>'.join(str(city) for city in db.get_cities(self.db_cursor))
-        page_with_datetime = page.format(cities=cities)
-        self.respond(config.OK, page_with_datetime)
+        cities = db.get_cities(self.db_cursor)
+        self.respond(config.OK, views.cities_page(cities))
 
 if __name__ == '__main__':
     server = HTTPServer((config.HOST, config.PORT), MyRequestHandler)
