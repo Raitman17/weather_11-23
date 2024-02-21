@@ -13,6 +13,7 @@ CONTENT_HEADER = 'Content-Type', f'text/{CONTENT_TYPE}'
 TEMPLATES = 'templates/'
 TEMPLATE_MAIN = f'{TEMPLATES}index.html'
 TEMPLATE_WEATHER = f'{TEMPLATES}weather.html'
+TEMPLATE_WEATHER_DUMMY = f'{TEMPLATES}weather_dummy.html'
 TEMPLATE_CITIES = f'{TEMPLATES}cities.html'
 
 YANDEX_HEADER = 'X-Yandex-API-Key'

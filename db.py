@@ -1,10 +1,8 @@
 import psycopg
-import dotenv
 import os
 import query
 
 def connect() -> tuple[psycopg.Connection, psycopg.Cursor]:
-    dotenv.load_dotenv()
     port = os.environ.get('PG_PORT')
     credentials = {
         'host': os.environ.get('PG_HOST', default='127.0.0.1'),

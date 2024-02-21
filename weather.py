@@ -8,9 +8,8 @@ class ForeignApiError(Exception):
     def __init__(self, api_name: str, status_code: int) -> None:
         super().__init__(f'API {api_name} failed with status code {status_code}')
 
-def get_weather(latitude: float, longtitude: float) -> dict:
-    KEY = os.environ.get('YANDEX_KEY')
-    headers = {YANDEX_HEADER: KEY}
+def get_weather(latitude: float, longtitude: float, yandex_key: str) -> dict:
+    headers = {YANDEX_HEADER: yandex_key}
     params = {'lat': latitude, 'lon': longtitude}
     response = requests.get(YANDEX_URL, headers=headers, params=params)
     if response.status_code != OK:

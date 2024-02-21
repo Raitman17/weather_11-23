@@ -1,0 +1,19 @@
+<html lang="en">
+    <head>
+        <title>
+            Weather
+        </title>
+    </head>
+    <body>
+        <form id="weather_form" action="/weather">
+            <select id="weather" name="city" form="weather_form">
+                {options}
+            </select>
+            <br><br>
+            <input type="submit">
+        </form>
+        <a href="/cities">Cities</a>
+        <br>
+        <a href="/">Back to main page</a>
+    </body>
+</html>

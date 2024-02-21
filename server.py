@@ -2,13 +2,22 @@ from http.server import HTTPServer, BaseHTTPRequestHandler
 
 import config
 import db
+import dotenv
+import os
 from typing import Optional
 import views
 import weather
 
-class MyRequestHandler(BaseHTTPRequestHandler):
-    db_connection, db_cursor = db.connect()
+# мы сделаем декоратор класса который подключит нас к базе и загрузит ключ яндекса!
+def connect_my_handler(class_: type) -> type:
+    dotenv.load_dotenv()
+    connection, cursor = db.connect()
+    setattr(class_, 'yandex_key', os.environ.get('YANDEX_KEY'))
+    setattr(class_, 'db_connection', connection)
+    setattr(class_, 'db_cursor', cursor)
+    return class_
 
+class MyRequestHandler(BaseHTTPRequestHandler):
     def get_query(self) -> dict:
         query = {}
         qm_index = self.path.find('?')
@@ -22,7 +31,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             try:
                 float(value)
             except ValueError:
-                query[key] = value
+                query[key] = views.plusses_to_spaces(value)
             else:
                 query[key] = float(value)
         return query
@@ -50,10 +59,12 @@ class MyRequestHandler(BaseHTTPRequestHandler):
     def weather_page(self) -> None:
         query = self.get_query()
         if 'city' not in query.keys():
-            self.respond(config.OK, '') # TODO
+            cities = [city for city, _, _ in db.get_cities(self.db_cursor)]
+            self.respond(config.OK, views.weather_dummy_page(cities))
+            return
         coords = db.get_coords_by_city(self.db_cursor, query['city'])
         if coords:
-            weather_data = weather.get_weather(*coords)
+            weather_data = weather.get_weather(*coords, self.yandex_key)
             weather_data['city'] = query['city']
             self.respond(config.OK, views.weather_page(weather_data))
         else:
@@ -68,7 +79,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             self.main_page()
 
 if __name__ == '__main__':
-    server = HTTPServer((config.HOST, config.PORT), MyRequestHandler)
+    server = HTTPServer((config.HOST, config.PORT), connect_my_handler(MyRequestHandler))
     print(f'Server started at http://{config.HOST}:{config.PORT}')
     try:
         server.serve_forever()
