@@ -4,9 +4,28 @@ import config
 import db
 from typing import Optional
 import views
+import weather
 
 class MyRequestHandler(BaseHTTPRequestHandler):
     db_connection, db_cursor = db.connect()
+
+    def get_query(self) -> dict:
+        query = {}
+        qm_index = self.path.find('?')
+        if qm_index == -1 or qm_index == len(self.path) - 1:
+            return query
+        for pair in self.path[qm_index+1:].split('&'):
+            key, value = pair.split('=')
+            if value.isdigit():
+                query[key] = int(value)
+                continue
+            try:
+                float(value)
+            except ValueError:
+                query[key] = value
+            else:
+                query[key] = float(value)
+        return query
 
     def respond(self, 
         status: int,
@@ -29,7 +48,16 @@ class MyRequestHandler(BaseHTTPRequestHandler):
         self.respond(config.OK, views.main_page())
 
     def weather_page(self) -> None:
-        self.respond(config.OK, views.weather_page())
+        query = self.get_query()
+        if 'city' not in query.keys():
+            self.respond(config.OK, '') # TODO
+        coords = db.get_coords_by_city(self.db_cursor, query['city'])
+        if coords:
+            weather_data = weather.get_weather(*coords)
+            weather_data['city'] = query['city']
+            self.respond(config.OK, views.weather_page(weather_data))
+        else:
+            self.respond(config.BAD_REQUEST, '') # TODO
 
     def do_GET(self) -> None:
         if self.path.startswith('/weather'):

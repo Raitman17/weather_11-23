@@ -19,5 +19,5 @@ def main_page() -> str:
     return load_page(config.TEMPLATE_MAIN)
 
 
-def weather_page() -> str:
-    return load_page(config.TEMPLATE_WEATHER)
+def weather_page(weather_data: dict) -> str:
+    return load_page(config.TEMPLATE_WEATHER, weather_data)

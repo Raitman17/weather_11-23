@@ -21,3 +21,7 @@ def get_cities(cursor: psycopg.Cursor) -> list[tuple]:
     cursor.execute(query.GET_CITIES)
     cities = cursor.fetchall()
     return cities
+
+def get_coords_by_city(cursor: psycopg.Cursor, city_name: str) -> tuple:
+    cursor.execute(query.GET_COORDS_BY_CITY, params=(city_name,))
+    return cursor.fetchone()

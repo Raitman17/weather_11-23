@@ -14,3 +14,7 @@ TEMPLATES = 'templates/'
 TEMPLATE_MAIN = f'{TEMPLATES}index.html'
 TEMPLATE_WEATHER = f'{TEMPLATES}weather.html'
 TEMPLATE_CITIES = f'{TEMPLATES}cities.html'
+
+YANDEX_HEADER = 'X-Yandex-API-Key'
+YANDEX_URL = 'https://api.weather.yandex.ru/v2/informers'
+WEATHER_KEYS = 'temp', 'feels_like', 'wind_speed'
