@@ -17,5 +17,5 @@ TEMPLATE_WEATHER_DUMMY = f'{TEMPLATES}weather_dummy.html'
 TEMPLATE_CITIES = f'{TEMPLATES}cities.html'
 
 YANDEX_HEADER = 'X-Yandex-API-Key'
-YANDEX_URL = 'https://api.weather.yandex.ru/v2/informers'
+YANDEX_URL = 'https://api.weather.yandex.ru/v2/forecast'
 WEATHER_KEYS = 'temp', 'feels_like', 'wind_speed'
