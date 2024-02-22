@@ -49,7 +49,8 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             for header_key, header_value in headers.items():
                 self.send_header(header_key, header_value)
         self.end_headers()
-        self.wfile.write(body.encode())
+        if body:
+            self.wfile.write(body.encode())
 
     def cities_page(self) -> None:
         cities = db.get_cities(self.db_cursor)
@@ -81,6 +82,36 @@ class MyRequestHandler(BaseHTTPRequestHandler):
         else:
             self.main_page()
 
+    def do_HEAD(self) -> None:
+        self.respond(config.OK)
+
+    def check_if_allowed(self) -> None:
+        if not self.path.startswith('/cities'):
+            self.respond(config.NOT_ALLOWED, headers=config.ALLOW_HEADER)
+            return False
+        return True
+
+    def do_POST(self) -> None:
+        if not self.check_if_allowed():
+            return
+
+
+    def do_DELETE(self) -> None:
+        if not self.check_if_allowed():
+            return
+        query = self.get_query()
+        city_key = 'city'
+        if city_key not in query.keys():
+            self.respond(config.BAD_REQUEST, 'you should have provided city in query')
+            return
+        if query[city_key] not in [city for city, _, _ in db.get_cities(self.db_cursor)]:
+            self.respond(config.BAD_REQUEST, f'city {query[city_key]} is not present in database')
+            return
+        if db.delete_city(self.db_cursor, self.db_connection, query[city_key]):
+            self.respond(config.NO_CONTENT)
+        else:
+            self.respond(config.SERVER_ERROR, f'city {query[city_key]} was not deleted')
+        
 
 if __name__ == '__main__':
     server = HTTPServer((config.HOST, config.PORT), connect_my_handler(MyRequestHandler))
