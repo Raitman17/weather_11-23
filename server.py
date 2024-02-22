@@ -3,6 +3,8 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Optional as Option
 
 import dotenv
+import json
+import psycopg
 
 import config
 import db
@@ -94,6 +96,26 @@ class MyRequestHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         if not self.check_if_allowed():
             return
+        content_len = self.headers.get(config.CONTENT_LEN_HEADER)
+        if not (isinstance(content_len, str) and content_len.isdigit()):
+            self.respond(config.BAD_REQUEST, f'you should have provided {config.CONTENT_LEN_HEADER}')
+            return
+        body = json.loads(self.rfile.read(int(content_len)))
+        if set(body.keys()) != config.CITY_REQUIRED_KEYS:
+            self.respond(config.BAD_REQUEST, f'keys {config.CITY_REQUIRED_KEYS} are required')
+            return
+
+        try:
+            response = db.add_city(self.db_cursor, self.db_connection, body['name'], body['lat'], body['lon'])
+        except psycopg.errors.UniqueViolation:
+            self.respond(config.BAD_REQUEST, f'record city={body["name"]} already exists')
+            self.db_connection.rollback()
+            return
+
+        if response:
+            self.respond(config.CREATED, f'record with city {body["name"]} was created')
+        else:
+            self.respond(config.SERVER_ERROR, f'failed to create record city={body["name"]}')
 
 
     def do_DELETE(self) -> None:
