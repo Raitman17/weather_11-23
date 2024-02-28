@@ -28,4 +28,5 @@ WEATHER_KEYS = 'temp', 'feels_like', 'wind_speed'
 
 TIMEOUT = 8
 
-CITY_REQUIRED_KEYS = {'name', 'lat', 'lon'}
+CITY_KEYS = ('name', 'latitude', 'longtitude')
+CITY_REQUIRED_KEYS = set(CITY_KEYS)

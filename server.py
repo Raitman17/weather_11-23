@@ -1,9 +1,9 @@
+import json
 import os
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Optional as Option
 
 import dotenv
-import json
 import psycopg
 
 import config
@@ -68,10 +68,11 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             cities = [city for city, _, _ in db.get_cities(self.db_cursor)]
             self.respond(config.OK, views.weather_dummy_page(cities))
             return
-        coords = db.get_coords_by_city(self.db_cursor, query[city_key])
+        city = query[city_key]
+        coords = db.get_coords_by_city(self.db_cursor, city)
         if coords:
             weather_data = weather.get_weather(*coords, self.yandex_key)
-            weather_data[city_key] = query[city_key]
+            weather_data[city_key] = city
             self.respond(config.OK, views.weather_page(weather_data))
         else:
             self.respond(config.BAD_REQUEST, '')  # TODO
@@ -88,10 +89,8 @@ class MyRequestHandler(BaseHTTPRequestHandler):
         self.respond(config.OK)
 
     def check_allowed(self) -> bool:
-        if not self.path.startswith('/cities'):
-            return False
-        return True
-    
+        return self.path.startswith('/cities')
+
     def check_auth(self) -> bool:
         if config.AUTH_HEADER not in self.headers.keys():
             return False
@@ -114,20 +113,30 @@ class MyRequestHandler(BaseHTTPRequestHandler):
             return False
         return self.auth()
 
+    def get_json_body(self) -> dict | None:
+        content_len = self.headers.get(config.CONTENT_LEN_HEADER)
+        if not (isinstance(content_len, str) and content_len.isdigit()):
+            self.respond(config.BAD_REQUEST, f'should have provided {config.CONTENT_LEN_HEADER}')
+            return None
+        try:
+            return json.loads(self.rfile.read(int(content_len)))
+        except json.JSONDecodeError as error:
+            self.respond(config.BAD_REQUEST, f'failed parsing json: {error}')
+            return None
+
     def do_POST(self) -> None:
         if not self.allow_and_auth():
             return
-        content_len = self.headers.get(config.CONTENT_LEN_HEADER)
-        if not (isinstance(content_len, str) and content_len.isdigit()):
-            self.respond(config.BAD_REQUEST, f'you should have provided {config.CONTENT_LEN_HEADER}')
+        body = self.get_json_body()
+        if body is None:
             return
-        body = json.loads(self.rfile.read(int(content_len)))
         if set(body.keys()) != config.CITY_REQUIRED_KEYS:
             self.respond(config.BAD_REQUEST, f'keys {config.CITY_REQUIRED_KEYS} are required')
             return
 
+        keys = [body[key] for key in config.CITY_KEYS]
         try:
-            response = db.add_city(self.db_cursor, self.db_connection, body['name'], body['lat'], body['lon'])
+            response = db.add_city(self.db_cursor, self.db_connection, *keys)
         except psycopg.errors.UniqueViolation:
             self.respond(config.OK, f'record city={body["name"]} already exists')
             self.db_connection.rollback()
@@ -138,7 +147,6 @@ class MyRequestHandler(BaseHTTPRequestHandler):
         else:
             self.respond(config.SERVER_ERROR, f'failed to create record city={body["name"]}')
 
-
     def do_DELETE(self) -> None:
         if not self.allow_and_auth():
             return
@@ -147,14 +155,33 @@ class MyRequestHandler(BaseHTTPRequestHandler):
         if city_key not in query.keys():
             self.respond(config.BAD_REQUEST, 'you should have provided city in query')
             return
-        if query[city_key] not in [city for city, _, _ in db.get_cities(self.db_cursor)]:
+        if query[city_key] not in db.get_cities_names(self.db_cursor):
             self.respond(config.ACCEPTED, f'city {query[city_key]} is not present in database')
             return
         if db.delete_city(self.db_cursor, self.db_connection, query[city_key]):
             self.respond(config.NO_CONTENT)
         else:
             self.respond(config.SERVER_ERROR, f'city {query[city_key]} was not deleted')
-        
+
+    def do_PUT(self) -> None:
+        if not self.allow_and_auth():
+            return
+        query = self.get_query()
+        city_key = 'name'
+        if city_key not in query.keys() or db.check_city(self.db_cursor, query[city_key]):
+            self.do_POST()
+            return
+        city = query[city_key]
+        body = self.get_json_body()
+        for attr in body.keys():
+            if attr not in config.CITY_REQUIRED_KEYS:
+                self.respond(config.BAD_REQUEST, f'key {attr} is not defined for instance')
+                return
+        if db.update_city(self.db_cursor, self.db_connection, body, city):
+            self.respond(config.OK, f'city {city} was updated')
+        else:
+            self.respond(config.SERVER_ERROR, f'city {city} was not updated')
+
 
 if __name__ == '__main__':
     server = HTTPServer((config.HOST, config.PORT), connect_my_handler(MyRequestHandler))
