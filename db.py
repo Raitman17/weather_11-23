@@ -51,3 +51,8 @@ def delete_city(
         city_name: str,
     ) -> bool:
     return change_db(cursor, conn, query.DELETE_CITY, (city_name,))
+
+
+def check_token(cursor: psycopg.Cursor, token: str) -> bool:
+    cursor.execute(query.CHECK_TOKEN, params=(token,))
+    return bool(cursor.fetchone()[0])

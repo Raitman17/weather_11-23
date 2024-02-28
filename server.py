@@ -87,14 +87,35 @@ class MyRequestHandler(BaseHTTPRequestHandler):
     def do_HEAD(self) -> None:
         self.respond(config.OK)
 
-    def check_if_allowed(self) -> None:
+    def check_allowed(self) -> bool:
         if not self.path.startswith('/cities'):
+            return False
+        return True
+    
+    def check_auth(self) -> bool:
+        if config.AUTH_HEADER not in self.headers.keys():
+            return False
+        return db.check_token(self.db_cursor, self.headers[config.AUTH_HEADER])
+
+    def allow(self) -> bool:
+        if not self.check_allowed():
             self.respond(config.NOT_ALLOWED, headers=config.ALLOW_HEADER)
             return False
         return True
 
+    def auth(self) -> bool:
+        if not self.check_auth():
+            self.respond(config.FORBIDDEN)
+            return False
+        return True
+
+    def allow_and_auth(self) -> bool:
+        if not self.allow():
+            return False
+        return self.auth()
+
     def do_POST(self) -> None:
-        if not self.check_if_allowed():
+        if not self.allow_and_auth():
             return
         content_len = self.headers.get(config.CONTENT_LEN_HEADER)
         if not (isinstance(content_len, str) and content_len.isdigit()):
@@ -108,7 +129,7 @@ class MyRequestHandler(BaseHTTPRequestHandler):
         try:
             response = db.add_city(self.db_cursor, self.db_connection, body['name'], body['lat'], body['lon'])
         except psycopg.errors.UniqueViolation:
-            self.respond(config.BAD_REQUEST, f'record city={body["name"]} already exists')
+            self.respond(config.OK, f'record city={body["name"]} already exists')
             self.db_connection.rollback()
             return
 
@@ -119,15 +140,15 @@ class MyRequestHandler(BaseHTTPRequestHandler):
 
 
     def do_DELETE(self) -> None:
-        if not self.check_if_allowed():
+        if not self.allow_and_auth():
             return
         query = self.get_query()
-        city_key = 'city'
+        city_key = 'name'
         if city_key not in query.keys():
             self.respond(config.BAD_REQUEST, 'you should have provided city in query')
             return
         if query[city_key] not in [city for city, _, _ in db.get_cities(self.db_cursor)]:
-            self.respond(config.BAD_REQUEST, f'city {query[city_key]} is not present in database')
+            self.respond(config.ACCEPTED, f'city {query[city_key]} is not present in database')
             return
         if db.delete_city(self.db_cursor, self.db_connection, query[city_key]):
             self.respond(config.NO_CONTENT)
